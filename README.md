@@ -31,7 +31,7 @@ This project simulates the data transaction between an iPhone and a computer. Th
   - Velocity calculation
   - Classification
   - Sample Output
-  <img width="594" alt="image" src="https://github.com/user-attachments/assets/465b3b6a-a8ff-4faa-998f-d652849e5762">
+  <img width="1320" alt="Screenshot 2024-07-19 at 18 36 56" src="https://github.com/user-attachments/assets/d3a75e13-8cf0-4a22-b4e3-e3f502fb10ef">
 
 
 ## Classifier
