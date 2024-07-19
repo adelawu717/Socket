@@ -7,6 +7,16 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.dates as mdates
+import joblib
+import numpy as np
+import pandas as pd
+from scipy.signal import lfilter, butter
+from scipy.stats import skew, kurtosis
+import numpy as np
+from scipy.stats import skew, kurtosis
+from numpy.fft import fft
+from sklearn.preprocessing import StandardScaler
+
 
 # Shared data structure for threads
 data = pd.DataFrame(columns=['Timestamp', 'attitudeRoll', 'accelerationX', 'accelerationY', 'accelerationZ'])
@@ -164,57 +174,94 @@ class DynamicPlotApp:
                         connection.settimeout(10)
                         buffer = ""
                         header = True
-                        while self.running:
-                            try:
-                                data_chunk = connection.recv(1024).decode()
-                                if not data_chunk:
+                        column_map = {}
+                        with open('result.csv', 'w') as f:
+                            while self.running:
+                                try:
+                                    data_chunk = connection.recv(1024).decode()
+                                    if not data_chunk:
+                                        break
+                                    buffer += data_chunk
+                                    while '\n' in buffer:
+                                        line, buffer = buffer.split('\n', 1)
+                                        if header:
+                                            headers = line.split(',')
+                                            column_map = {key: index for index, key in enumerate(headers)}
+                                            header = False
+                                            f.write(line + '\n')
+                                        else:
+                                            print(line)  # Print each received data line to the console
+                                            f.write(line + '\n')
+                                            parts = line.split(',')
+                                            if len(parts) >= 13:  # Ensure there are enough parts in the line
+                                                try:
+                                                    timestamp = float(parts[0])
+                                                    attitudeRoll = float(parts[10])
+                                                    accelerationX = float(parts[4])
+                                                    accelerationY = float(parts[5])
+                                                    accelerationZ = float(parts[6])
+                                                    if initial_angle is None:
+                                                        initial_angle = attitudeRoll  # Set the initial angle
+
+                                                    attitudeRoll -= initial_angle  # Reset the starting angle to zero
+
+                                                    with data_lock:
+                                                        data_row = pd.DataFrame([{
+                                                            'Timestamp': pd.to_datetime(timestamp, unit='s'),
+                                                            'attitudeRoll': attitudeRoll,
+                                                            'accelerationX': accelerationX,
+                                                            'accelerationY': accelerationY,
+                                                            'accelerationZ': accelerationZ
+                                                        }])
+                                                        global data
+                                                        data = pd.concat([data, data_row], ignore_index=True)
+
+                                                except ValueError:
+                                                    print("ValueError: Could not convert data")  # Debugging statement
+                                                    continue
+
+                                                # Process the new data point outside the lock
+                                                self.process_new_data_point()
+                                except socket.timeout:
+                                    print("Socket timeout, attempting to continue...")
                                     break
-                                buffer += data_chunk
-                                while '\n' in buffer:
-                                    line, buffer = buffer.split('\n', 1)
-                                    if header:
-                                        # Skip the header after reading it
-                                        header = False
-                                    else:
-                                        parts = line.split(',')
-                                        if len(parts) >= 13:  # Ensure there are enough parts in the line
-                                            try:
-                                                timestamp = float(parts[0])
-                                                attitudeRoll = float(parts[10])
-                                                accelerationX = float(parts[4])
-                                                accelerationY = float(parts[5])
-                                                accelerationZ = float(parts[6])
-                                                if initial_angle is None:
-                                                    initial_angle = attitudeRoll  # Set the initial angle
-
-                                                attitudeRoll -= initial_angle  # Reset the starting angle to zero
-
-                                                with data_lock:
-                                                    data_row = pd.DataFrame([{
-                                                        'Timestamp': pd.to_datetime(timestamp, unit='s'),
-                                                        'attitudeRoll': attitudeRoll,
-                                                        'accelerationX': accelerationX,
-                                                        'accelerationY': accelerationY,
-                                                        'accelerationZ': accelerationZ
-                                                    }])
-                                                    global data
-                                                    data = pd.concat([data, data_row], ignore_index=True)
-
-                                            except ValueError:
-                                                print("ValueError: Could not convert data")  # Debugging statement
-                                                continue
-
-                                            # Process the new data point outside the lock
-                                            self.process_new_data_point()
-                            except socket.timeout:
-                                print("Socket timeout, attempting to continue...")
-                                break
-                            except ConnectionResetError:
-                                print("Connection reset by peer, attempting to continue...")
-                                break
+                                except ConnectionResetError:
+                                    print("Connection reset by peer, attempting to continue...")
+                                    break
+                    # Process the received file after connection closes
+                    self.process_received_file()
             except Exception as e:
                 print(f"Exception: {e}")
                 continue
+    def process_received_file(self):
+        try:
+            # Load the new data
+            new_data = pd.read_csv('result.csv')
+
+            # Process the data to get features
+            features = extract_features(new_data[1:], window_size=100, step_size=50, exclude_columns=['Timestamp'])
+            all_features = []
+            all_features.append(features)
+
+            # Convert features to numpy array
+            new_input = np.array(all_features)
+
+            # Load the model
+            clf = joblib.load('classifier_model.joblib')
+
+            # Make predictions
+            predictions = clf.predict(new_input)
+
+            # Print or save the predictions
+            print(predictions)
+
+
+        except Exception as e:
+            print(f"Error processing received file: {e}")
+
+
+
+
 
     def process_new_data_point(self):
         """Process the latest data point to calculate the stage and color and update the plot."""
@@ -229,11 +276,6 @@ class DynamicPlotApp:
                 # data['accelerationXD'] = smooth_data(data, 'accelerationX')
                 # data['accelerationYD'] = smooth_data(data, 'accelerationY')
                 # data['accelerationZD'] = smooth_data(data, 'accelerationZ')
-
-
-
-
-
 
                 # Integration to get velocity
                 data['velocityX'] = np.cumsum(data['accelerationXD']) / 20
@@ -273,6 +315,91 @@ class DynamicPlotApp:
     def stop(self):
         self.running = False
         self.receiver_thread.join()
+
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = lfilter(b, a, data)
+    return y
+
+def load_and_preprocess(data):
+    # Clean data: Assume dropping NA and any constant columns as example
+    data = data.dropna()
+    data = data.loc[:, (data != data.iloc[0]).any()]
+
+    # Filter data: Example with a low-pass filter
+    for col in data.columns[:-1]:  # Assuming last column is not part of the filtering
+        data[col] = butter_lowpass_filter(data[col], cutoff=3.0, fs=50.0, order=2)
+
+    # Normalize data
+    scaler = StandardScaler()
+    data.iloc[:, :-1] = scaler.fit_transform(data.iloc[:, :-1])
+
+    return data
+
+
+
+
+
+def calculate_spectral_features(segment):
+    # Compute the FFT
+    fft_vals = fft(segment, axis=0)
+    fft_freqs = np.fft.fftfreq(len(segment), d=1.)  # Assuming unit sampling frequency
+
+    # Magnitude of FFT
+    mag_fft = np.abs(fft_vals)
+
+    # Reshape fft_freqs for broadcasting if necessary
+    if mag_fft.ndim > 1:
+        fft_freqs = fft_freqs[:, np.newaxis]
+
+    # Spectral centroid
+    centroid = np.sum(fft_freqs * mag_fft, axis=0) / np.sum(mag_fft, axis=0)
+
+    # Spectral bandwidth
+    bandwidth = np.sqrt(np.sum(((fft_freqs - centroid)**2) * mag_fft, axis=0) / np.sum(mag_fft, axis=0))
+
+    # Spectral flatness
+    flatness = 10 ** (np.mean(np.log10(mag_fft + 1e-10), axis=0) - np.log10(np.mean(mag_fft, axis=0) + 1e-10))
+
+    # Spectral variance
+    variance = np.sum(((fft_freqs - centroid)**2) * mag_fft, axis=0) / np.sum(mag_fft, axis=0)
+
+    return np.array([centroid]), np.array([bandwidth]), np.array([flatness]), np.array([variance])
+
+def extract_features(data, window_size, step_size, exclude_columns=None):
+    if exclude_columns is not None:
+        data = data.drop(columns=exclude_columns)
+
+    global_features = []  # Corrected initialization
+    for column in data.columns:
+        column_data = data[column].values
+        mean_features = np.array([column_data.mean()])  # Ensure scalar values are wrapped in an array
+        max_features = np.array([column_data.max()])
+        min_features = np.array([column_data.min()])
+        std_features = np.array([column_data.std()])
+        skew_features = np.array([skew(column_data, axis=0)])
+        kurt_features = np.array([kurtosis(column_data, axis=0)])
+
+        # Frequency domain features
+        centroid_features, bandwidth_features, flatness_features, variance_features = calculate_spectral_features(column_data)
+        # Combine all features into one array
+        combined_features = np.concatenate([
+            mean_features, max_features, min_features, std_features, skew_features, kurt_features,
+            centroid_features, bandwidth_features, flatness_features, variance_features
+        ])
+        global_features.append(combined_features)
+
+    global_features = np.concatenate(global_features)  # Corrected to concatenate list of arrays
+
+    return global_features
+
+
+
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()

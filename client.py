@@ -11,7 +11,8 @@ def send_data(host, port, filepath):
             # Send data
             for line in file:
                 sock.sendall(line.encode())
-                time.sleep(0.1)  # Simulate network delay
+                time.sleep(0.06)  # Simulate network delay
+        print("File sent successfully")
 
 if __name__ == "__main__":
     HOST, PORT = 'localhost', 12345
