@@ -143,10 +143,11 @@ class DynamicPlotApp:
         self.ax2.tick_params(axis='y', labelcolor='red')
 
         # Add a button to start the receiver thread
-        self.start_button = ttk.Button(root, text="Start", command=self.start_receiver_thread)
-        self.start_button.pack(side=tk.BOTTOM)
+        # self.start_button = ttk.Button(root, text="Start", command=self.start_receiver_thread)
+        # self.start_button.pack(side=tk.BOTTOM)
 
         self.running = False
+        self.start_receiver_thread()
 
     def start_receiver_thread(self):
         self.running = True
