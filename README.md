@@ -32,6 +32,8 @@ This project simulates the data transaction between an iPhone and a computer. Th
   - Classification
   - Sample Output
   <img width="1320" alt="Screenshot 2024-07-19 at 18 36 56" src="https://github.com/user-attachments/assets/d3a75e13-8cf0-4a22-b4e3-e3f502fb10ef">
+  <img width="467" alt="Screenshot 2024-07-24 at 13 03 10" src="https://github.com/user-attachments/assets/bc01fb3f-e56e-44a0-a23f-2f820a2fd60e">
+
 
 
 ## Classifier
