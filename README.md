@@ -5,7 +5,7 @@ This project simulates the data transaction between an iPhone and a computer. Th
 # How to run it
 - Step 1: add both client and server (serverTest or newServer) to run configurations
 - Step 2: run the server file, and wait to see the "Server is listening for incoming connections..." on the console for socket establishment
-- Step 3: run the client file. The connection is successfully built when "Connection from ('127.0.0.1', 53701)" is printed on the console. Then you can move to the GUI window to see the dynamic plots.
+- Step 3: run the client file. The connection is successfully built when "Connection from ('127.0.0.1', *****)" is printed on the console. Then you can move to the GUI window to see the dynamic plots.
   
 ## Files Introduction
 
