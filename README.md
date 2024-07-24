@@ -9,13 +9,13 @@ This project simulates the data transaction between an iPhone and a computer. Th
   
 # 🌟Files Introduction
 
-## Client
+## ⌚️ Client
 
 ### `client.py`
 - Sends data file line by line through a socket during a connection with the server.
 - Uses the `sleep` function to simulate network delay.
 
-## Server
+## 💻 Server
 
 ### `serverTest.py`
 - A test file which establishes a TCP connection with a client.
@@ -36,7 +36,7 @@ This project simulates the data transaction between an iPhone and a computer. Th
 
 
 
-## Classifier
+## 🧮 Classifier
 ### `classifier.py`
 - preprocess data files from Movement_data, train a RF classifier and save it
 ### 'classifier_model.joblib"
@@ -44,6 +44,6 @@ This project simulates the data transaction between an iPhone and a computer. Th
 ### `Movement_data`
 - The data files for training and testing
 
-## Test file
+## 📃 Test file
 ### `GERF-L-D001-M6-S0043.csv`
 - the test file of a M6 data from the Standard_data dataset
