@@ -254,7 +254,7 @@ class DynamicPlotApp:
             predictions = clf.predict(new_input)
 
             # Print or save the predictions
-            print(predictions)
+            print(f"Classification result: Motion{predictions+1}")
 
 
         except Exception as e:
