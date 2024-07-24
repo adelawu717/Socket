@@ -13,7 +13,7 @@ This project simulates the data transaction between an iPhone and a computer. Th
 
 ### `client.py`
 - Sends data file line by line through a socket during a connection with the server.
-- Uses the `sleep` function to simulate network delay.
+- May Use the `sleep` function to simulate network delay.
 
 ## 💻 Server
 
