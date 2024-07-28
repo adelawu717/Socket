@@ -5,18 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
-from tkinter import ttk
 import matplotlib.dates as mdates
 import joblib
-import numpy as np
-import pandas as pd
 from scipy.signal import lfilter, butter
-from scipy.stats import skew, kurtosis
-import numpy as np
 from scipy.stats import skew, kurtosis
 from numpy.fft import fft
 from sklearn.preprocessing import StandardScaler
-
 
 # Shared data structure for threads
 data = pd.DataFrame(columns=['Timestamp', 'attitudeRoll', 'accelerationX', 'accelerationY', 'accelerationZ'])
@@ -30,6 +24,7 @@ previous_velX_trend = None
 velocities = []
 time_seconds = []
 origin_time = None
+batch_update_size = 10
 
 def smooth_data(data, column_name, window_size=3):
     """Smooth data using a simple moving average."""
@@ -61,7 +56,6 @@ def calculate_stages(current_index):
     roll_previous = np.abs(np.degrees(previous_row['SmoothedRoll']))
     velX_current = current_row['SmoothedVelX']
     velX_previous = previous_row['SmoothedVelX']
-    mag_current = current_row['velocityMagnitude']
     timestamp_current = current_row['Timestamp']
 
     roll_trend = roll_current >= roll_previous
@@ -101,15 +95,14 @@ def calculate_stages(current_index):
         elif (roll_previous - roll_current >= 30):
             new_stage = 4
 
-
     previous_stage = new_stage
 
     # Collect velocities and timestamps for numerical integration if in Stage 2
-    if new_stage == 2:
-        if origin_time is not None:
-            time_elapsed = (timestamp_current - origin_time).total_seconds()
-            time_seconds.append(time_elapsed)
-            velocities.append(mag_current)
+    # if new_stage == 2:
+    #     if origin_time is not None:
+    #         time_elapsed = (timestamp_current - origin_time).total_seconds()
+    #         time_seconds.append(time_elapsed)
+    #         velocities.append(mag_current)
 
     previous_roll = roll_current
     previous_velX_trend = velX_trend
@@ -128,23 +121,19 @@ class DynamicPlotApp:
         self.canvas = FigureCanvasTkAgg(self.fig, master=root)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        # Create a twinx axis for the second y-axis
-        self.ax2 = self.ax1.twinx()
-
-        # Initial plot setup for attitudeRoll
-        self.line1, = self.ax1.plot([], [], color='blue', marker='o', label='Attitude Roll')
         self.ax1.set_xlabel('Timestamp')
         self.ax1.set_ylabel('Attitude Roll (degrees)', color='blue')
         self.ax1.tick_params(axis='y', labelcolor='blue')
 
-        # Initial plot setup for velocityMagnitude
-        self.scatter = self.ax2.scatter([], [], color='red', label='Velocity Magnitude')
-        self.ax2.set_ylabel('Velocity Magnitude', color='red')
-        self.ax2.tick_params(axis='y', labelcolor='red')
+        # Create a line plot for attitudeRoll
+        self.line1, = self.ax1.plot([], [], color='blue', label='Attitude Roll')
 
-        # Add a button to start the receiver thread
-        # self.start_button = ttk.Button(root, text="Start", command=self.start_receiver_thread)
-        # self.start_button.pack(side=tk.BOTTOM)
+        # Placeholder for scatter plot
+        self.scatter = None
+
+        self.timestamps = []
+        self.attitudeRolls = []
+        self.colors = []
 
         self.running = False
         self.start_receiver_thread()
@@ -234,6 +223,7 @@ class DynamicPlotApp:
             except Exception as e:
                 print(f"Exception: {e}")
                 continue
+
     def process_received_file(self):
         try:
             # Load the new data
@@ -267,31 +257,12 @@ class DynamicPlotApp:
         except Exception as e:
             print(f"Error processing received file: {e}")
 
-
-
-
-
     def process_new_data_point(self):
         """Process the latest data point to calculate the stage and color and update the plot."""
         with data_lock:
             if not data.empty:
                 current_index = len(data) - 1
 
-                # Remove the mean (bias) from the acceleration data
-                data['accelerationXD'] = data['accelerationX'] - 0.058687863613335826
-                data['accelerationYD'] = data['accelerationY'] - -0.016740100437335752
-                data['accelerationZD'] = data['accelerationZ'] - 0.022834287908395628
-                # data['accelerationXD'] = smooth_data(data, 'accelerationX')
-                # data['accelerationYD'] = smooth_data(data, 'accelerationY')
-                # data['accelerationZD'] = smooth_data(data, 'accelerationZ')
-
-                # Integration to get velocity
-                data['velocityX'] = np.cumsum(data['accelerationXD']) / 20
-                data['velocityY'] = np.cumsum(data['accelerationYD']) / 20
-                data['velocityZ'] = np.cumsum(data['accelerationZD']) / 20
-
-                # Calculate the velocity magnitude
-                data['velocityMagnitude'] = np.sqrt(data['velocityX'] ** 2 + data['velocityY'] ** 2 + data['velocityZ'] ** 2)
 
                 # Smooth the data
                 data['SmoothedRoll'] = smooth_data(data, 'attitudeRoll')
@@ -303,13 +274,20 @@ class DynamicPlotApp:
                 # Convert Timestamp to matplotlib date format for plotting
                 timestamp = mdates.date2num(data.iloc[current_index]['Timestamp'])
 
-                # Update the scatter plot with the new point
-                self.ax2.scatter([timestamp], [data.iloc[current_index]['velocityMagnitude']], color=color)
-
                 # Update the attitudeRoll line plot
-                self.line1.set_data(mdates.date2num(data['Timestamp']), np.abs(np.degrees(data['attitudeRoll'])))
+                self.timestamps.append(timestamp)
+                self.attitudeRolls.append(np.abs(np.degrees(data.iloc[current_index]['attitudeRoll'])))
+                self.colors.append(color)
+
+                # Update the line plot and scatter plot with colors
+                self.line1.set_data(self.timestamps, self.attitudeRolls)
                 self.ax1.relim()
                 self.ax1.autoscale_view()
+
+                # Update the scatter plot
+                if self.scatter:
+                    self.scatter.remove()  # Remove the previous scatter plot
+                self.scatter = self.ax1.scatter(self.timestamps, self.attitudeRolls, c=self.colors, label='Attitude Roll')
 
                 # Redraw the canvas to show the new point
                 self.canvas.draw()
@@ -323,7 +301,6 @@ class DynamicPlotApp:
     def stop(self):
         self.running = False
         self.receiver_thread.join()
-
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -346,10 +323,6 @@ def load_and_preprocess(data):
     data.iloc[:, :-1] = scaler.fit_transform(data.iloc[:, :-1])
 
     return data
-
-
-
-
 
 def calculate_spectral_features(segment):
     # Compute the FFT
@@ -403,11 +376,6 @@ def extract_features(data, window_size, step_size, exclude_columns=None):
     global_features = np.concatenate(global_features)  # Corrected to concatenate list of arrays
 
     return global_features
-
-
-
-
-
 
 if __name__ == "__main__":
     root = tk.Tk()

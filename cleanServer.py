@@ -8,11 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 import matplotlib.dates as mdates
 import joblib
-import numpy as np
-import pandas as pd
 from scipy.signal import lfilter, butter
-from scipy.stats import skew, kurtosis
-import numpy as np
 from scipy.stats import skew, kurtosis
 from numpy.fft import fft
 from sklearn.preprocessing import StandardScaler
@@ -57,21 +53,21 @@ def calculate_stages(current_index):
     current_row = data.iloc[current_index]
     previous_row = data.iloc[current_index - 2]
 
-    roll_current = np.abs(np.degrees(current_row['SmoothedRoll']))
-    roll_previous = np.abs(np.degrees(previous_row['SmoothedRoll']))
-    velX_current = current_row['SmoothedVelX']
-    velX_previous = previous_row['SmoothedVelX']
-    mag_current = current_row['velocityMagnitude']
+    roll_current = np.abs(np.degrees(current_row['attitudeRoll']))
+    roll_previous = np.abs(np.degrees(previous_row['attitudeRoll']))
+    accX_current = current_row['accelerationX']
+    accX_previous = previous_row['accelerationX']
+    # mag_current = current_row['velocityMagnitude']
     timestamp_current = current_row['Timestamp']
 
     roll_trend = roll_current >= roll_previous
-    velX_trend = velX_current >= velX_previous
+    velX_trend = accX_current >= accX_previous
 
     new_stage = previous_stage  # Default to previous stage
 
     # Apply the new stability definition
     if is_stable(roll_current, roll_previous):
-        if previous_stage == 1 and velX_current < -0.05:
+        if previous_stage == 1 and accX_current < -0.05:
             new_stage = 2  # Stable and velocity Y is not increasing
             if previous_stage == 1:
                 # Calculate Stage 1 score at the transition to Stage 2
@@ -81,7 +77,7 @@ def calculate_stages(current_index):
                 velocities = []
                 time_seconds = []
         if previous_stage == 2:
-            if roll_current >= 50 and velX_trend != previous_velX_trend and velX_current > 0:
+            if roll_current >= 50 and velX_trend != previous_velX_trend and accX_current > 0:
                 new_stage = 3
                 if previous_stage == 2:
                     # Calculate Stage 2 score at the transition to Stage 3
@@ -105,11 +101,11 @@ def calculate_stages(current_index):
     previous_stage = new_stage
 
     # Collect velocities and timestamps for numerical integration if in Stage 2
-    if new_stage == 2:
-        if origin_time is not None:
-            time_elapsed = (timestamp_current - origin_time).total_seconds()
-            time_seconds.append(time_elapsed)
-            velocities.append(mag_current)
+    # if new_stage == 2:
+    #     if origin_time is not None:
+    #         time_elapsed = (timestamp_current - origin_time).total_seconds()
+    #         time_seconds.append(time_elapsed)
+    #         velocities.append(mag_current)
 
     previous_roll = roll_current
     previous_velX_trend = velX_trend
@@ -132,15 +128,15 @@ class DynamicPlotApp:
         self.ax2 = self.ax1.twinx()
 
         # Initial plot setup for attitudeRoll
-        self.line1, = self.ax1.plot([], [], color='blue', marker='o', label='Attitude Roll')
+        self.line1, = self.ax1.plot([], [],  label='Attitude Roll')  # Keep line plot
         self.ax1.set_xlabel('Timestamp')
         self.ax1.set_ylabel('Attitude Roll (degrees)', color='blue')
         self.ax1.tick_params(axis='y', labelcolor='blue')
 
         # Initial plot setup for velocityMagnitude
-        self.scatter = self.ax2.scatter([], [], color='red', label='Velocity Magnitude')
-        self.ax2.set_ylabel('Velocity Magnitude', color='red')
-        self.ax2.tick_params(axis='y', labelcolor='red')
+        # self.scatter2 = self.ax2.scatter([], [], color='red', label='Velocity Magnitude')
+        # self.ax2.set_ylabel('Velocity Magnitude', color='red')
+        # self.ax2.tick_params(axis='y', labelcolor='red')
 
         # Add a button to start the receiver thread
         # self.start_button = ttk.Button(root, text="Start", command=self.start_receiver_thread)
@@ -234,6 +230,7 @@ class DynamicPlotApp:
             except Exception as e:
                 print(f"Exception: {e}")
                 continue
+
     def process_received_file(self):
         try:
             # Load the new data
@@ -267,10 +264,6 @@ class DynamicPlotApp:
         except Exception as e:
             print(f"Error processing received file: {e}")
 
-
-
-
-
     def process_new_data_point(self):
         """Process the latest data point to calculate the stage and color and update the plot."""
         with data_lock:
@@ -285,17 +278,17 @@ class DynamicPlotApp:
                 # data['accelerationYD'] = smooth_data(data, 'accelerationY')
                 # data['accelerationZD'] = smooth_data(data, 'accelerationZ')
 
-                # Integration to get velocity
-                data['velocityX'] = np.cumsum(data['accelerationXD']) / 20
-                data['velocityY'] = np.cumsum(data['accelerationYD']) / 20
-                data['velocityZ'] = np.cumsum(data['accelerationZD']) / 20
-
-                # Calculate the velocity magnitude
-                data['velocityMagnitude'] = np.sqrt(data['velocityX'] ** 2 + data['velocityY'] ** 2 + data['velocityZ'] ** 2)
+                # # Integration to get velocity
+                # data['velocityX'] = np.cumsum(data['accelerationXD']) / 20
+                # data['velocityY'] = np.cumsum(data['accelerationYD']) / 20
+                # data['velocityZ'] = np.cumsum(data['accelerationZD']) / 20
+                #
+                # # Calculate the velocity magnitude
+                # data['velocityMagnitude'] = np.sqrt(data['velocityX'] ** 2 + data['velocityY'] ** 2 + data['velocityZ'] ** 2)
 
                 # Smooth the data
-                data['SmoothedRoll'] = smooth_data(data, 'attitudeRoll')
-                data['SmoothedVelX'] = smooth_data(data, 'accelerationX')
+                # data['SmoothedRoll'] = smooth_data(data, 'attitudeRoll')
+                # data['SmoothedVelX'] = smooth_data(data, 'accelerationX')
 
                 # Calculate the color and stage for the latest data point
                 color, stage = calculate_stages(current_index)
@@ -303,11 +296,16 @@ class DynamicPlotApp:
                 # Convert Timestamp to matplotlib date format for plotting
                 timestamp = mdates.date2num(data.iloc[current_index]['Timestamp'])
 
-                # Update the scatter plot with the new point
-                self.ax2.scatter([timestamp], [data.iloc[current_index]['velocityMagnitude']], color=color)
-
-                # Update the attitudeRoll line plot
+                # # Update the line plot with new points
                 self.line1.set_data(mdates.date2num(data['Timestamp']), np.abs(np.degrees(data['attitudeRoll'])))
+
+                # Overlay scatter points with different colors based on stage
+                self.ax1.scatter([timestamp], [np.abs(np.degrees(data.iloc[current_index]['attitudeRoll']))], color=color)
+
+                # # Update the scatter plot for velocityMagnitude with the new point
+                # self.ax2.scatter([timestamp], [data.iloc[current_index]['velocityMagnitude']], color=color)
+
+                # Update the axis limits
                 self.ax1.relim()
                 self.ax1.autoscale_view()
 
@@ -323,7 +321,6 @@ class DynamicPlotApp:
     def stop(self):
         self.running = False
         self.receiver_thread.join()
-
 
 def butter_lowpass_filter(data, cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -346,10 +343,6 @@ def load_and_preprocess(data):
     data.iloc[:, :-1] = scaler.fit_transform(data.iloc[:, :-1])
 
     return data
-
-
-
-
 
 def calculate_spectral_features(segment):
     # Compute the FFT
@@ -403,11 +396,6 @@ def extract_features(data, window_size, step_size, exclude_columns=None):
     global_features = np.concatenate(global_features)  # Corrected to concatenate list of arrays
 
     return global_features
-
-
-
-
-
 
 if __name__ == "__main__":
     root = tk.Tk()
