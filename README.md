@@ -17,11 +17,11 @@ This project simulates the data transaction between an iPhone and a computer. Th
 
 ## 💻 Server
 
-### receive_data.py
+### 'data_receiver.py'
 - the part where the server establishes a TCP connection with a client, and receives data from the socket and prints each line
 - a temp.csv file is created to store data
   
-### dynamic_plot.py
+### 'dynamic_plot.py'
 Dependencies:
 pip install socket
 pip install threading
