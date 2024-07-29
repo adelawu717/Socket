@@ -1,16 +1,17 @@
-# This is a sample Python script.
+import tkinter as tk
+from data_receiver import DataReceiver
+from dynamic_plot import DynamicPlotApp
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+if __name__ == "__main__":
+    # Start data receiver
+    data_receiver = DataReceiver()
+    data_receiver.start()
 
+    # Wait for the data receiver to finish
+    data_receiver.receiver_thread.join()
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # Uncomment to plot the data
+    # root = tk.Tk()
+    # app = DynamicPlotApp(root)
+    # root.protocol("WM_DELETE_WINDOW", app.stop)
+    # root.mainloop()
