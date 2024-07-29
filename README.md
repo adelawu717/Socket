@@ -16,7 +16,7 @@ This project simulates the data transaction between an iPhone and a computer. Th
 - May Use the `sleep` function to simulate network delay.
 
 ## 💻 Server
-### `main.py
+### `main.py`
 - run data_reciever to receive data and save data as temp.csv
 - run dynamic_plot.py to read and plot temp.csv
 
