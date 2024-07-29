@@ -17,11 +17,23 @@ This project simulates the data transaction between an iPhone and a computer. Th
 
 ## 💻 Server
 
-### `serverTest.py`
-- A test file which establishes a TCP connection with a client.
-- Prints each line of the received data.
-- Sample Output
+### receive_data.py
+- the part where the server establishes a TCP connection with a client, and receives data from the socket and prints each line
+- a temp.csv file is created to store data
+  
+### dynamic_plot.py
+Dependencies:
+pip install socket
+pip install threading
+pip install tk
+pip install matplotlib
+pip install pandas
+- read each line of the temp.csv file
+- plot the data in the monitor view:
   <img width="1257" alt="Screenshot 2024-07-19 at 18 31 11" src="https://github.com/user-attachments/assets/2abb2a60-077a-4cdd-97e3-177a411c1d68">
+
+
+
 
 
 ### `newServer.py`
