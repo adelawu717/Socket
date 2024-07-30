@@ -149,15 +149,16 @@ def dtw_rms_distance_scaled(R, O):
 
 def map_combined_metric_to_score(elbow_rms_results_scaled, jerk_diff, class_possibility,
                                  wrist_rms_results_scaled, ROM_diff,
-                                 min_rms=0, max_rms=1,
+                                 min_rms=0, max_rms=2,
                                  weight_rms=0.2, weight_rom=0.1, weight_jerk=0.1, weight_class=0.3,
-                                 weight_wrist_rms=0.2):
+                                 weight_wrist_rms=0.2, epsilon=1e-6):
     """
     Combine the scaled RMS distance, ROM difference, jerk difference, class possibility,
     wrist RMS distance into a single score.
     Normalize and combine these metrics using the specified weights.
     The combined metric is then mapped to a score in the range [0, 10].
     """
+    print(wrist_rms_results_scaled)
     if not (0 <= elbow_rms_results_scaled <= max_rms):
         raise ValueError(f"Scaled RMS distance should be in the range [0, {max_rms}].")
     if not (0 <= class_possibility <= 1):
@@ -174,12 +175,12 @@ def map_combined_metric_to_score(elbow_rms_results_scaled, jerk_diff, class_poss
     normalized_wrist_rms = wrist_rms_results_scaled / (max_rms - min_rms)
 
     # Invert the normalized RMS distances (higher RMS should lower the score)
-    inverted_rms = 1 - elbow_rms_results_scaled
-    inverted_wrist_rms = 1 - wrist_rms_results_scaled
+    inverted_rms = 1 - normalized_rms
+    inverted_wrist_rms = 1 - normalized_wrist_rms
 
     # Invert ROM_diff and jerk_diff since smaller values are better
-    inverted_rom_diff = 1 - ROM_diff
-    inverted_jerk_diff = 1 - jerk_diff
+    inverted_rom_diff = 1 / (ROM_diff + epsilon)
+    inverted_jerk_diff = 1 / (jerk_diff + epsilon)
 
     # Combine the normalized/inverted values using the given weights
     combined_metric = (
@@ -206,7 +207,7 @@ def map_combined_metric_to_score(elbow_rms_results_scaled, jerk_diff, class_poss
     return score
 
 
-def calculate_score(class_possibility, new_file_path="/Users/adelawu/PycharmProjects/OnTrack/result.csv", benchmark_file_path="GERF-L-D001-M6-S0043.csv"):
+def calculate_score(class_possibility, new_file_path="GERF-L-D001-M6-S0113.csv", benchmark_file_path="GERF-L-D001-M6-S0043.csv"):
     new_jerk, new_rom, new_wrist, new_elbow = process_file(new_file_path)
     benchmark_jerk, benchmark_rom, benchmark_wrist, benchmark_elbow = process_file(benchmark_file_path)
 
@@ -227,6 +228,9 @@ def calculate_score(class_possibility, new_file_path="/Users/adelawu/PycharmProj
                                          wrist_distance, rom_diff)
 
     return score
+if __name__ == "__main__":
+    score = calculate_score(class_possibility=0.88)
+    print(score)
 
 
 # if __name__ == "__main__":
