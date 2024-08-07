@@ -7,8 +7,13 @@ if __name__ == "__main__":
     data_receiver = DataReceiver()
     data_receiver.start()
 
-    # Wait for the data receiver to finish
-    data_receiver.receiver_thread.join()
+    # Keep the main thread alive to allow server to accept connections
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("Shutting down server...")
+        data_receiver.stop()
 
     # Uncomment to plot the data
     # root = tk.Tk()

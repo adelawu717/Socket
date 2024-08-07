@@ -16,5 +16,5 @@ def send_data(host, port, filepath):
 
 if __name__ == "__main__":
     HOST, PORT = 'localhost', 12345
-    FILEPATH = 'GERF-L-D001-M6-S0043.csv'
+    FILEPATH = 'GERF-L-D001-M6-S0119.csv'
     send_data(HOST, PORT, FILEPATH)

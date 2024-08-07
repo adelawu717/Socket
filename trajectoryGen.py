@@ -10,7 +10,7 @@ def main():
 
     try:
         # Run the MATLAB script
-        datafile_path = '/Users/adelawu/Desktop/MRes/OnTrack_Rehab/ArmTroi-main/data/GERF-R-D001-M6-S0044.csv'  # Replace with the actual path to your data file
+        datafile_path = '/Users/adelawu/Desktop/MRes/OnTrack_Rehab/ArmTroi-main/data/GERF-R-D001-M6-S0112.csv'  # Replace with the actual path to your data file
 
         # Set the datafile variable in the MATLAB workspace
         eng.workspace['datafile'] = datafile_path
