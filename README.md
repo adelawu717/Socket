@@ -3,7 +3,7 @@
 This project simulates the data transaction between an iPhone and a computer. The client and server files can now run concurrently on one computer for validation.
 
 # 🌟How to run it
-- Step 1: add both client and server (serverTest or newServer) to run configurations
+- Step 1: add both client.py and server (serverTest.py or main.py) to run configurations
 - Step 2: run the server file, and wait to see the "Server is listening for incoming connections..." on the console for socket establishment
 - Step 3: run the client file. The connection is successfully built when "Connection from ('127.0.0.1', *****)" is printed on the console. Then you can move to the GUI window to see the dynamic plots.
   
