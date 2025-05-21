@@ -3,9 +3,22 @@
 This project simulates the data transaction between an iPhone and a computer. The client and server files can now run concurrently on one computer for validation.
 
 # 🌟How to run it
+## For testing on local machine
 - Step 1: add both client.py and server (serverTest.py or main.py) to run configurations
 - Step 2: run the server file, and wait to see the "Server is listening for incoming connections..." on the console for socket establishment
 - Step 3: run the client file. The connection is successfully built when "Connection from ('127.0.0.1', *****)" is printed on the console. Then you can move to the GUI window to see the dynamic plots.
+  
+## For streaming with Motion Tracking app
+- Step 1: get the IP address of you laptop with command in terminal: ipconfig getifaddr en0
+- Step 2: run main.py on laptop
+- Step 3: on Motion Tracking app, start session on apple watch, "Start stream", and input the IP address and port number (12345)
+![IMG_1349](https://github.com/user-attachments/assets/5e9f215b-cf1d-411c-861c-6b3c65f508d1)
+
+![IMG_1350](https://github.com/user-attachments/assets/d96a7255-99c8-4006-9237-cd0641683a0b)
+- Step 4: see streaming data:
+<img width="1661" alt="Screenshot 2025-05-21 at 11 09 15" src="https://github.com/user-attachments/assets/ec174aad-048d-43bc-9394-4403d4aeea88" />
+
+
   
 # 🌟Files Introduction
 
